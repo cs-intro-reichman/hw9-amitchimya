@@ -11,6 +11,9 @@ public class MemorySpace {
 	// A list of memory blocks that are presently free
 	private LinkedList freeList;
 
+	// The size of the memory space to be managed
+	private int maxSize;
+
 	/**
 	 * Constructs a new managed memory space of a given maximal size.
 	 * 
@@ -25,6 +28,7 @@ public class MemorySpace {
 	    // zero, and its length is the given memory size.
 		freeList = new LinkedList();
 		freeList.addLast(new MemoryBlock(0, maxSize));
+		this.maxSize= maxSize;
 	}
 
 	/**
@@ -58,7 +62,24 @@ public class MemorySpace {
 	 * @return the base address of the allocated block, or -1 if unable to allocate
 	 */
 	public int malloc(int length) {		
-		//// Replace the following statement with your code
+		ListIterator iterator = freeList.iterator();
+		while (iterator.hasNext()) {
+			if(iterator.current.block.length >= length) {
+				MemoryBlock newBlock = new MemoryBlock(iterator.current.block.baseAddress, length);
+				allocatedList.addLast(newBlock);
+				if (iterator.current.block.length == length) {
+					freeList.remove(iterator.current.block);
+				}
+				else {
+					MemoryBlock freeBlock = new MemoryBlock(iterator.current.block.baseAddress+length, iterator.current.block.length-length);
+					int index = freeList.indexOf(iterator.current.block);
+					freeList.add(index, freeBlock);
+					freeList.remove(index+1);
+				}
+				return newBlock.baseAddress;
+			}
+			iterator.next();
+		}
 		return -1;
 	}
 
@@ -71,7 +92,19 @@ public class MemorySpace {
 	 *            the starting address of the block to freeList
 	 */
 	public void free(int address) {
-		//// Write your code here
+		if (allocatedList.getSize()==0) {
+			throw new IllegalArgumentException(
+					"index must be between 0 and size");
+		}
+		ListIterator iterator = allocatedList.iterator();
+		while (iterator.hasNext()) {
+			if (iterator.current.block.baseAddress==address) {
+				Node current = iterator.current;
+				freeList.addLast(current.block);
+				allocatedList.remove(current);
+			}
+			iterator.next();
+		}
 	}
 	
 	/**
@@ -88,6 +121,38 @@ public class MemorySpace {
 	 * In this implementation Malloc does not call defrag.
 	 */
 	public void defrag() {
-		//// Write your code here
+		
+		Boolean found = false;
+		MemoryBlock newBlock = null;
+		Node toRemove1 = null;
+		int index = 0;
+		Node toRemove2 = null;
+		while (!found) {
+			ListIterator iterator = freeList.iterator();
+			while (iterator.hasNext() && !found) {
+				int sumIter = iterator.current.block.baseAddress + iterator.current.block.length;
+				ListIterator insideIterator = freeList.iterator();
+				while (insideIterator.hasNext() && !found) {
+					if (insideIterator.current.block.baseAddress==sumIter) {
+						newBlock = new MemoryBlock(iterator.current.block.baseAddress, iterator.current.block.length+insideIterator.current.block.length);
+						toRemove1 = insideIterator.current;
+						index = freeList.indexOf(iterator.current.block);
+						toRemove2 = iterator.current;
+						found = true;
+					}
+				insideIterator.next();
+				}
+			iterator.next();
+			}
+		
+		if (found) {
+			freeList.remove(toRemove1);
+			freeList.add(index, newBlock);
+			freeList.remove(toRemove2);
+			found = false;
+		} 
+		else found = true;
+		}
+		
 	}
 }
